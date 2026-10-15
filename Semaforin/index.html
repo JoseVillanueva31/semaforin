@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Semaforín | Organiza tu vida académica</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <header class="encabezado">
+      <div class="marca">
+        <span class="logo">🚦</span>
+        <h1>Semaforín</h1>
+      </div>
+      <p>Organiza tus evaluaciones sin complicaciones.</p>
+    </header>
+
+    <main class="contenedor">
+      <section class="bienvenida">
+        <div>
+          <h2>Mi organización académica</h2>
+          <p>
+            Visualiza tus evaluaciones y descubre cuáles son tus semanas más
+            exigentes.
+          </p>
+        </div>
+      </section>
+
+      <section class="resumen">
+        <article class="tarjeta">
+          <h3>Evaluaciones registradas</h3>
+          <p id="total-evaluaciones">0</p>
+        </article>
+
+        <article class="tarjeta">
+          <h3>Próxima evaluación</h3>
+          <p id="proxima-evaluacion">Sin evaluaciones</p>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>Agregar evaluación</h2>
+
+        <form id="formulario-evaluacion">
+          <label for="asignatura">Asignatura</label>
+          <input
+            type="text"
+            id="asignatura"
+            placeholder="Ej: Matemáticas"
+            required
+          />
+
+          <label for="nombre">Nombre de la evaluación</label>
+          <input type="text" id="nombre" placeholder="Ej: Prueba 2" required />
+
+          <label for="fecha">Fecha</label>
+          <input type="date" id="fecha" required />
+
+          <button type="submit">Agregar evaluación</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Semáforo de carga académica</h2>
+        <p>Revisa la cantidad de evaluaciones por semana.</p>
+
+        <div class="leyenda">
+          <span class="verde">Verde: 0-1</span>
+          <span class="amarillo">Amarillo: 2-3</span>
+          <span class="rojo">Rojo: 4 o más</span>
+        </div>
+
+        <div id="semaforo-semanal">
+          <p>Aún no hay evaluaciones registradas.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Mis evaluaciones</h2>
+
+        <div id="lista-evaluaciones">
+          <p>Todavía no has agregado evaluaciones.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Semaforín © 2026</p>
+    </footer>
+  </body>
+</html>
