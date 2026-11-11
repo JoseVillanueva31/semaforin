@@ -1,247 +1,45 @@
 "use strict";
 
-// 1. Recuperar evaluaciones guardadas
-let evaluaciones = JSON.parse(
-  localStorage.getItem("semaforin_evaluaciones") || "[]",
-);
+const EVAL_KEY = "semaforin_evaluaciones";
+const STUDY_KEY = "semaforin_bloques_estudio";
+const read = (key, fallback) => { try { const value = JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); return Array.isArray(value) ? value : fallback; } catch { return fallback; } };
+let evaluaciones = read(EVAL_KEY, []).filter((item) => item && item.fecha).map((item) => ({ id: item.id || crypto.randomUUID(), asignatura: item.asignatura || "Sin asignatura", nombre: item.nombre || "Evaluación", fecha: item.fecha, tipo: item.tipo || "Otro", completada: Boolean(item.completada) }));
+let bloques = read(STUDY_KEY, []).filter((item) => item && item.fecha && item.titulo);
+let calendarDate = new Date();
+let calendarMode = "month";
+let selectedDate = toISO(new Date());
 
-// 2. Conectar JavaScript con HTML
-const formulario = document.getElementById("formulario-evaluacion");
-const lista = document.getElementById("lista-evaluaciones");
-const semaforo = document.getElementById("semaforo-semanal");
-const total = document.getElementById("total-evaluaciones");
-const proxima = document.getElementById("proxima-evaluacion");
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => [...document.querySelectorAll(selector)];
+const save = () => { localStorage.setItem(EVAL_KEY, JSON.stringify(evaluaciones)); localStorage.setItem(STUDY_KEY, JSON.stringify(bloques)); };
+function toISO(date) { const d = new Date(date); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
+function fromISO(value) { const [year, month, day] = value.split("-").map(Number); return new Date(year, month - 1, day); }
+function formatDate(value, options = { day: "numeric", month: "long" }) { return fromISO(value).toLocaleDateString("es-CL", options); }
+function dateLabel(value) { return formatDate(value, { weekday: "long", day: "numeric", month: "long" }); }
+function todayStart() { const now = new Date(); now.setHours(0, 0, 0, 0); return now; }
+function getWeekStart(date) { const d = new Date(date); const day = d.getDay(); d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day)); d.setHours(0, 0, 0, 0); return d; }
+function weekKey(value) { return toISO(getWeekStart(fromISO(value))); }
+function daysBetween(value) { return Math.round((fromISO(value) - todayStart()) / 86400000); }
+function escapeHtml(text) { return String(text).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
+function announce(message) { $("#alerts").innerHTML = `<div class="alert">${escapeHtml(message)}</div>`; setTimeout(() => { $("#alerts").innerHTML = ""; }, 3500); }
+function empty(message, detail = "") { return `<div class="empty-state"><strong>${message}</strong><span>${detail}</span></div>`; }
+function getUpcoming() { return evaluaciones.filter((item) => !item.completada && fromISO(item.fecha) >= todayStart()).sort((a, b) => a.fecha.localeCompare(b.fecha)); }
+function traffic(count) { return count <= 1 ? { color: "green", label: "Carga baja" } : count <= 3 ? { color: "yellow", label: "Carga media" } : { color: "red", label: "Carga alta" }; }
+function evaluationRow(item, upcoming = false) { const date = fromISO(item.fecha); return `<article class="evaluation-row"><div class="date-box"><small>${date.toLocaleDateString("es-CL", { weekday: "short" }).replace(".", "")}</small><strong>${date.getDate()}</strong></div><div class="row-main"><strong>${escapeHtml(item.asignatura)} · ${escapeHtml(item.nombre)}</strong><small>${formatDate(item.fecha)} · ${escapeHtml(item.tipo || "Evaluación")}${item.completada ? " · Completada" : ""}</small></div><div class="row-actions"><button class="small-button" data-toggle-evaluation="${item.id}" aria-label="${item.completada ? "Reabrir" : "Completar"} evaluación">${item.completada ? "↩" : "✓"}</button><button class="small-button" data-edit-evaluation="${item.id}">Editar</button><button class="small-button danger" data-delete-evaluation="${item.id}">Eliminar</button></div></article>`; }
+function renderSummary() { const pending = evaluaciones.filter((item) => !item.completada); const done = evaluaciones.length - pending.length; const next = getUpcoming()[0]; $("#stat-pending").textContent = pending.length; $("#stat-done").textContent = done; $("#stat-next").textContent = next ? `${next.asignatura} · ${formatDate(next.fecha, { day: "numeric", month: "short" })}` : "Sin pendientes"; $("#stat-blocks").textContent = bloques.filter((item) => !item.completado).length; }
+function renderTraffic() { const groups = {}; evaluaciones.filter((item) => !item.completada).forEach((item) => { const key = weekKey(item.fecha); groups[key] = (groups[key] || 0) + 1; }); const values = Object.values(groups); const high = values.filter((value) => value >= 4).length; const medium = values.filter((value) => value >= 2 && value <= 3).length; const low = values.filter((value) => value <= 1).length; $("#traffic-summary").innerHTML = `<div class="traffic-item green"><strong>${low}</strong><span>Semanas bajas</span></div><div class="traffic-item yellow"><strong>${medium}</strong><span>Semanas medias</span></div><div class="traffic-item red"><strong>${high}</strong><span>Semanas altas</span></div>`; }
+function renderUpcoming() { const items = getUpcoming().filter((item) => daysBetween(item.fecha) <= 7).slice(0, 4); $("#upcoming-list").innerHTML = items.length ? items.map((item) => evaluationRow(item, true)).join("") : empty("Todo despejado por ahora", "No hay evaluaciones en los próximos 7 días."); }
+function renderEvaluations() { const items = [...evaluaciones].sort((a, b) => a.fecha.localeCompare(b.fecha) || Number(a.completada) - Number(b.completada)); $("#evaluation-list").innerHTML = items.length ? items.map((item) => evaluationRow(item)).join("") : empty("Aún no tienes evaluaciones", "Agrega la primera para comenzar a organizarte."); }
+function renderStudy() { const pending = bloques.filter((item) => !item.completado); $("#study-count").textContent = `${pending.length} pendiente${pending.length === 1 ? "" : "s"}`; const next = getUpcoming()[0]; $("#focus-title").textContent = next ? `Enfócate en ${next.asignatura}` : "Tu foco aparecerá aquí"; $("#focus-description").textContent = next ? `${next.nombre} es tu próxima evaluación · ${formatDate(next.fecha)}. Reserva un bloque para llegar con calma.` : "Agrega una evaluación para saber qué asignatura requiere atención."; const ordered = [...bloques].sort((a, b) => a.fecha.localeCompare(b.fecha)); $("#study-list").innerHTML = ordered.length ? ordered.map((item) => `<article class="study-row"><input class="check" type="checkbox" ${item.completado ? "checked" : ""} data-toggle-study="${item.id}" aria-label="Marcar bloque como completado"><div class="row-main"><strong>${escapeHtml(item.titulo)}</strong><small>${formatDate(item.fecha)} · ${escapeHtml(item.duracion)}</small></div><button class="small-button danger" data-delete-study="${item.id}">Eliminar</button></article>`).join("") : empty("Todavía no hay bloques", "Reserva 30 minutos para avanzar en tu próxima evaluación."); }
+function renderCalendar() { const label = $("#calendar-label"); const grid = $("#calendar-grid"); const events = evaluaciones.filter((item) => item.fecha); if (calendarMode === "week") { const start = getWeekStart(calendarDate); const days = [...Array(7)].map((_, index) => { const day = new Date(start); day.setDate(start.getDate() + index); return toISO(day); }); label.textContent = `${formatDate(days[0], { day: "numeric", month: "short" })} – ${formatDate(days[6], { day: "numeric", month: "short", year: "numeric" })}`; grid.innerHTML = `<div class="calendar-month">${days.map((day) => calendarDay(day, events, false)).join("")}</div>`; } else { const monthStart = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1); const first = new Date(monthStart); first.setDate(1 - (monthStart.getDay() === 0 ? 6 : monthStart.getDay() - 1)); label.textContent = calendarDate.toLocaleDateString("es-CL", { month: "long", year: "numeric" }); const days = [...Array(42)].map((_, index) => { const day = new Date(first); day.setDate(first.getDate() + index); return toISO(day); }); grid.innerHTML = `<div class="calendar-month"><div class="weekday">Lun</div><div class="weekday">Mar</div><div class="weekday">Mié</div><div class="weekday">Jue</div><div class="weekday">Vie</div><div class="weekday">Sáb</div><div class="weekday">Dom</div>${days.map((day) => calendarDay(day, events, fromISO(day).getMonth() !== calendarDate.getMonth())).join("")}</div>`; } renderSelectedDay(); }
+function calendarDay(day, events, muted) { const today = day === toISO(new Date()); const selected = day === selectedDate; const dayEvents = events.filter((item) => item.fecha === day); return `<div class="day ${muted ? "muted-day" : ""} ${today ? "today" : ""} ${selected ? "selected" : ""}" data-select-day="${day}"><span class="day-number">${fromISO(day).getDate()}</span>${dayEvents.slice(0, 3).map((item) => `<div class="day-event ${item.completada ? "done" : ""}">${escapeHtml(item.asignatura)}</div>`).join("")}</div>`; }
+function renderSelectedDay() { const items = evaluaciones.filter((item) => item.fecha === selectedDate); $("#selected-day").innerHTML = `<h3>${dateLabel(selectedDate)}</h3>${items.length ? items.map((item) => evaluationRow(item)).join("") : `<p class="muted">No hay evaluaciones registradas para este día.</p>`}`; }
+function update() { save(); renderSummary(); renderTraffic(); renderUpcoming(); renderEvaluations(); renderStudy(); renderCalendar(); }
+function showView(view) { $$(".view").forEach((item) => item.classList.toggle("active", item.id === `view-${view}`)); $$(".nav-link").forEach((item) => item.classList.toggle("active", item.dataset.view === view)); window.location.hash = view; if (view === "calendario") renderCalendar(); }
+function openEvaluation(item = null) { const form = $("#evaluation-form"); form.reset(); $("#evaluation-id").value = item?.id || ""; $("#form-title").textContent = item ? "Edita tu evaluación" : "Agrega una evaluación"; $("#evaluation-date").value = item?.fecha || toISO(new Date()); $("#subject").value = item?.asignatura || ""; $("#evaluation-name").value = item?.nombre || ""; $("#evaluation-type").value = item?.tipo || "Prueba"; $("#evaluation-dialog").showModal(); setTimeout(() => $("#subject").focus(), 0); }
+function deleteEvaluation(id) { const item = evaluaciones.find((evaluation) => evaluation.id === id); if (item && confirm(`¿Eliminar “${item.nombre}” de ${item.asignatura}?`)) { evaluaciones = evaluaciones.filter((evaluation) => evaluation.id !== id); update(); announce("Evaluación eliminada."); } }
 
-// Convertir una fecha YYYY-MM-DD a fecha local
-function convertirFecha(fecha) {
-  const [anio, mes, dia] = fecha.split("-").map(Number);
-  return new Date(anio, mes - 1, dia);
-}
-
-// Formatear fechas para mostrarlas
-function mostrarFecha(fecha) {
-  return convertirFecha(fecha).toLocaleDateString("es-CL", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-// Guardar datos en el navegador
-function guardarEvaluaciones() {
-  localStorage.setItem("semaforin_evaluaciones", JSON.stringify(evaluaciones));
-}
-
-// 3. Agregar evaluaciones
-formulario.addEventListener("submit", function (evento) {
-  evento.preventDefault();
-
-  const asignatura = document.getElementById("asignatura").value.trim();
-  const nombre = document.getElementById("nombre").value.trim();
-  const fecha = document.getElementById("fecha").value;
-
-  if (!asignatura || !nombre || !fecha) {
-    alert("Completa todos los campos.");
-    return;
-  }
-
-  const evaluacion = {
-    id: crypto.randomUUID(),
-    asignatura,
-    nombre,
-    fecha,
-  };
-
-  evaluaciones.push(evaluacion);
-  guardarEvaluaciones();
-  actualizarPantalla();
-
-  formulario.reset();
-});
-
-// 4. Eliminar evaluaciones
-function eliminarEvaluacion(id) {
-  if (!confirm("¿Deseas eliminar esta evaluación?")) {
-    return;
-  }
-
-  evaluaciones = evaluaciones.filter((evaluacion) => evaluacion.id !== id);
-
-  guardarEvaluaciones();
-  actualizarPantalla();
-}
-
-// 5. Calcular inicio de semana (lunes)
-function obtenerInicioSemana(fechaTexto) {
-  const fecha = convertirFecha(fechaTexto);
-  const dia = fecha.getDay();
-
-  const diferencia = dia === 0 ? -6 : 1 - dia;
-  fecha.setDate(fecha.getDate() + diferencia);
-
-  return fecha;
-}
-
-// 6. Determinar color según cantidad
-function obtenerCarga(cantidad) {
-  if (cantidad <= 1) {
-    return { color: "verde", texto: "Carga baja" };
-  }
-
-  if (cantidad <= 3) {
-    return { color: "amarillo", texto: "Carga media" };
-  }
-
-  return { color: "rojo", texto: "Carga alta" };
-}
-
-// 7. Actualizar resumen y próxima evaluación
-function actualizarResumen() {
-  total.textContent = evaluaciones.length;
-
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-
-  const futuras = evaluaciones
-    .filter((e) => convertirFecha(e.fecha) >= hoy)
-    .sort((a, b) => a.fecha.localeCompare(b.fecha));
-
-  if (futuras.length === 0) {
-    proxima.textContent = "Sin evaluaciones próximas";
-  } else {
-    const siguiente = futuras[0];
-
-    proxima.textContent =
-      siguiente.asignatura +
-      " - " +
-      siguiente.nombre +
-      " (" +
-      mostrarFecha(siguiente.fecha) +
-      ")";
-  }
-}
-
-// 8. Mostrar evaluaciones registradas
-function actualizarLista() {
-  lista.innerHTML = "";
-
-  if (evaluaciones.length === 0) {
-    lista.textContent = "Todavía no has agregado evaluaciones.";
-    return;
-  }
-
-  const ordenadas = [...evaluaciones].sort((a, b) =>
-    a.fecha.localeCompare(b.fecha),
-  );
-
-  ordenadas.forEach((evaluacion) => {
-    const elemento = document.createElement("div");
-    elemento.className = "evaluacion";
-
-    const informacion = document.createElement("p");
-    const nombre = document.createElement("strong");
-
-    nombre.textContent = evaluacion.asignatura + " - " + evaluacion.nombre;
-
-    informacion.appendChild(nombre);
-    informacion.appendChild(document.createElement("br"));
-    informacion.appendChild(
-      document.createTextNode(mostrarFecha(evaluacion.fecha)),
-    );
-
-    const boton = document.createElement("button");
-    boton.textContent = "Eliminar";
-    boton.type = "button";
-
-    boton.addEventListener("click", () => {
-      eliminarEvaluacion(evaluacion.id);
-    });
-
-    elemento.appendChild(informacion);
-    elemento.appendChild(boton);
-    lista.appendChild(elemento);
-  });
-}
-
-// 9. Agrupar evaluaciones por semana
-function actualizarSemaforo() {
-  semaforo.innerHTML = "";
-
-  if (evaluaciones.length === 0) {
-    semaforo.textContent = "Aún no hay evaluaciones registradas.";
-    return;
-  }
-
-  const semanas = {};
-
-  evaluaciones.forEach((evaluacion) => {
-    const inicio = obtenerInicioSemana(evaluacion.fecha);
-
-    const clave =
-      inicio.getFullYear() +
-      "-" +
-      String(inicio.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(inicio.getDate()).padStart(2, "0");
-
-    if (!semanas[clave]) {
-      semanas[clave] = [];
-    }
-
-    semanas[clave].push(evaluacion);
-  });
-
-  Object.keys(semanas)
-    .sort()
-    .forEach((clave) => {
-      const cantidad = semanas[clave].length;
-      const carga = obtenerCarga(cantidad);
-
-      const inicio = convertirFecha(clave);
-      const fin = new Date(inicio);
-      fin.setDate(fin.getDate() + 6);
-
-      const tarjeta = document.createElement("div");
-      tarjeta.className = "semana " + carga.color;
-
-      const titulo = document.createElement("h3");
-      titulo.textContent =
-        "Semana del " +
-        inicio.toLocaleDateString("es-CL") +
-        " al " +
-        fin.toLocaleDateString("es-CL");
-
-      const descripcion = document.createElement("p");
-      descripcion.textContent =
-        carga.texto + " - " + cantidad + " evaluación(es)";
-
-      tarjeta.appendChild(titulo);
-      tarjeta.appendChild(descripcion);
-
-      semanas[clave].forEach((evaluacion) => {
-        const detalle = document.createElement("p");
-        detalle.textContent =
-          "• " +
-          evaluacion.asignatura +
-          ": " +
-          evaluacion.nombre +
-          " (" +
-          mostrarFecha(evaluacion.fecha) +
-          ")";
-
-        tarjeta.appendChild(detalle);
-      });
-
-      semaforo.appendChild(tarjeta);
-    });
-}
-
-// 10. Actualizar toda la aplicación
-function actualizarPantalla() {
-  actualizarResumen();
-  actualizarLista();
-  actualizarSemaforo();
-}
-
-// Cargar información al abrir Semaforín
-actualizarPantalla();
+document.addEventListener("click", (event) => { const view = event.target.closest("[data-view]")?.dataset.view || event.target.closest("[data-view-target]")?.dataset.viewTarget; if (view) showView(view); if (event.target.closest("[data-open-form]")) openEvaluation(); if (event.target.closest("[data-open-study]")) { $("#study-form").reset(); $("#study-date").value = toISO(new Date()); $("#study-dialog").showModal(); } if (event.target.closest("[data-close-dialog]")) $("#evaluation-dialog").close(); if (event.target.closest("[data-close-study]")) $("#study-dialog").close(); const edit = event.target.closest("[data-edit-evaluation]"); if (edit) openEvaluation(evaluaciones.find((item) => item.id === edit.dataset.editEvaluation)); const remove = event.target.closest("[data-delete-evaluation]"); if (remove) deleteEvaluation(remove.dataset.deleteEvaluation); const toggle = event.target.closest("[data-toggle-evaluation]"); if (toggle) { const item = evaluaciones.find((evaluation) => evaluation.id === toggle.dataset.toggleEvaluation); if (item) { item.completada = !item.completada; update(); announce(item.completada ? "Evaluación marcada como completada." : "Evaluación reabierta."); } } const studyToggle = event.target.closest("[data-toggle-study]"); if (studyToggle) { const item = bloques.find((block) => block.id === studyToggle.dataset.toggleStudy); if (item) { item.completado = studyToggle.checked; update(); announce(item.completado ? "Bloque completado. ¡Buen trabajo!" : "Bloque reabierto."); } } const studyRemove = event.target.closest("[data-delete-study]"); if (studyRemove) { if (confirm("¿Eliminar este bloque de estudio?")) { bloques = bloques.filter((item) => item.id !== studyRemove.dataset.deleteStudy); update(); announce("Bloque eliminado."); } } const day = event.target.closest("[data-select-day]"); if (day) { selectedDate = day.dataset.selectDay; renderCalendar(); } const mode = event.target.closest("[data-calendar-mode]"); if (mode) { calendarMode = mode.dataset.calendarMode; $$("[data-calendar-mode]").forEach((button) => button.classList.toggle("active", button === mode)); renderCalendar(); } if (event.target.closest("#previous-period")) { if (calendarMode === "month") calendarDate.setMonth(calendarDate.getMonth() - 1); else calendarDate.setDate(calendarDate.getDate() - 7); renderCalendar(); } if (event.target.closest("#next-period")) { if (calendarMode === "month") calendarDate.setMonth(calendarDate.getMonth() + 1); else calendarDate.setDate(calendarDate.getDate() + 7); renderCalendar(); } });
+$("#evaluation-form").addEventListener("submit", (event) => { event.preventDefault(); const id = $("#evaluation-id").value; const data = { asignatura: $("#subject").value.trim(), nombre: $("#evaluation-name").value.trim(), fecha: $("#evaluation-date").value, tipo: $("#evaluation-type").value }; if (!data.asignatura || !data.nombre || !data.fecha) return; if (id) Object.assign(evaluaciones.find((item) => item.id === id), data); else evaluaciones.push({ id: crypto.randomUUID(), ...data, completada: false }); $("#evaluation-dialog").close(); update(); announce(id ? "Evaluación actualizada." : "Evaluación agregada a tu agenda."); });
+$("#study-form").addEventListener("submit", (event) => { event.preventDefault(); bloques.push({ id: crypto.randomUUID(), titulo: $("#study-title-input").value.trim(), fecha: $("#study-date").value, duracion: $("#study-duration").value, completado: false }); $("#study-dialog").close(); update(); showView("estudio"); announce("Bloque de estudio reservado."); });
+const initialView = ["inicio", "calendario", "estudio"].includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : "inicio"; update(); showView(initialView);

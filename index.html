@@ -3,90 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Semaforín | Organiza tu vida académica</title>
+    <meta name="theme-color" content="#6554c0" />
+    <title>Semaforín | Organiza tu semana</title>
     <link rel="stylesheet" href="style.css" />
     <script src="script.js" defer></script>
   </head>
   <body>
-    <header class="encabezado">
-      <div class="marca">
-        <span class="logo">🚦</span>
-        <h1>Semaforín</h1>
-      </div>
-      <p>Organiza tus evaluaciones sin complicaciones.</p>
-    </header>
-
-    <main class="contenedor">
-      <section class="bienvenida">
-        <div>
-          <h2>Mi organización académica</h2>
-          <p>
-            Visualiza tus evaluaciones y descubre cuáles son tus semanas más
-            exigentes.
-          </p>
-        </div>
-      </section>
-
-      <section class="resumen">
-        <article class="tarjeta">
-          <h3>Evaluaciones registradas</h3>
-          <p id="total-evaluaciones">0</p>
-        </article>
-
-        <article class="tarjeta">
-          <h3>Próxima evaluación</h3>
-          <p id="proxima-evaluacion">Sin evaluaciones</p>
-        </article>
-      </section>
-
-      <section class="panel">
-        <h2>Agregar evaluación</h2>
-
-        <form id="formulario-evaluacion">
-          <label for="asignatura">Asignatura</label>
-          <input
-            type="text"
-            id="asignatura"
-            placeholder="Ej: Matemáticas"
-            required
-          />
-
-          <label for="nombre">Nombre de la evaluación</label>
-          <input type="text" id="nombre" placeholder="Ej: Prueba 2" required />
-
-          <label for="fecha">Fecha</label>
-          <input type="date" id="fecha" required />
-
-          <button type="submit">Agregar evaluación</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <h2>Semáforo de carga académica</h2>
-        <p>Revisa la cantidad de evaluaciones por semana.</p>
-
-        <div class="leyenda">
-          <span class="verde">Verde: 0-1</span>
-          <span class="amarillo">Amarillo: 2-3</span>
-          <span class="rojo">Rojo: 4 o más</span>
-        </div>
-
-        <div id="semaforo-semanal">
-          <p>Aún no hay evaluaciones registradas.</p>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Mis evaluaciones</h2>
-
-        <div id="lista-evaluaciones">
-          <p>Todavía no has agregado evaluaciones.</p>
-        </div>
-      </section>
+    <header class="site-header"><div class="header-inner"><a class="brand" href="#inicio" aria-label="Ir al inicio"><span class="brand-mark" aria-hidden="true">✦</span><span><strong>Semaforín</strong><small>Tu semana, bajo control</small></span></a><nav class="main-nav" aria-label="Navegación principal"><button class="nav-link active" data-view="inicio">Resumen</button><button class="nav-link" data-view="calendario">Calendario</button><button class="nav-link" data-view="estudio">Plan de estudio</button></nav></div></header>
+    <main class="container">
+      <section class="view active" id="view-inicio" aria-labelledby="welcome-title"><div class="welcome-row"><div><p class="eyebrow">ORGANIZACIÓN ACADÉMICA</p><h1 id="welcome-title">Hola, tienes el control de tu semana.</h1><p class="lead">Registra tus evaluaciones, identifica semanas exigentes y reserva tiempo para estudiar.</p></div><button class="button primary" data-open-form>＋ Agregar evaluación</button></div><div id="alerts" class="alerts" aria-live="polite"></div><section class="stats-grid" aria-label="Resumen académico"><article class="stat-card"><span class="stat-icon purple">◷</span><div><span>Evaluaciones pendientes</span><strong id="stat-pending">0</strong></div></article><article class="stat-card"><span class="stat-icon blue">→</span><div><span>Próxima evaluación</span><strong id="stat-next">Sin pendientes</strong></div></article><article class="stat-card"><span class="stat-icon green">✓</span><div><span>Evaluaciones completadas</span><strong id="stat-done">0</strong></div></article><article class="stat-card"><span class="stat-icon orange">▣</span><div><span>Bloques por completar</span><strong id="stat-blocks">0</strong></div></article></section><div class="dashboard-grid"><section class="card traffic-card"><div class="section-heading"><div><p class="eyebrow">VISTA GENERAL</p><h2>Semáforo académico</h2></div><button class="text-button" data-view-target="calendario">Ver calendario →</button></div><p class="muted">Una guía rápida para anticipar tu carga de evaluaciones.</p><div id="traffic-summary" class="traffic-summary"></div><div class="legend" aria-label="Significado del semáforo"><span><i class="dot green"></i>Baja · 0–1</span><span><i class="dot yellow"></i>Media · 2–3</span><span><i class="dot red"></i>Alta · 4 o más</span></div></section><section class="card upcoming-card"><div class="section-heading"><div><p class="eyebrow">PRÓXIMOS 7 DÍAS</p><h2>Para tener en cuenta</h2></div></div><div id="upcoming-list"></div></section></div><section class="card evaluations-card"><div class="section-heading"><div><p class="eyebrow">TU AGENDA</p><h2>Evaluaciones</h2></div><button class="text-button" data-open-form>＋ Nueva evaluación</button></div><div id="evaluation-list"></div></section></section>
+      <section class="view" id="view-calendario" aria-labelledby="calendar-title"><div class="page-title"><div><p class="eyebrow">PLANIFICA CON ANTICIPACIÓN</p><h1 id="calendar-title">Calendario académico</h1><p class="lead">Explora tus evaluaciones y carga semanal de un vistazo.</p></div><button class="button primary" data-open-form>＋ Agregar evaluación</button></div><section class="card calendar-card"><div class="calendar-toolbar"><button class="icon-button" id="previous-period" aria-label="Periodo anterior">‹</button><h2 id="calendar-label"></h2><button class="icon-button" id="next-period" aria-label="Periodo siguiente">›</button><div class="segmented"><button class="segment active" data-calendar-mode="month">Mes</button><button class="segment" data-calendar-mode="week">Semana</button></div></div><div id="calendar-grid"></div><div id="selected-day" class="selected-day"></div></section></section>
+      <section class="view" id="view-estudio" aria-labelledby="study-title"><div class="page-title"><div><p class="eyebrow">UN PASO A LA VEZ</p><h1 id="study-title">Plan de estudio</h1><p class="lead">Convierte tus próximas evaluaciones en bloques concretos y alcanzables.</p></div><button class="button primary" data-open-study>＋ Agregar bloque</button></div><section class="card focus-card"><div class="focus-copy"><span class="stat-icon purple">⌁</span><div><p class="eyebrow">RECOMENDACIÓN</p><h2 id="focus-title">Tu foco aparecerá aquí</h2><p id="focus-description" class="muted">Agrega una evaluación para saber qué asignatura requiere atención.</p></div></div></section><section class="card study-card"><div class="section-heading"><div><p class="eyebrow">TUS BLOQUES</p><h2>Tiempo reservado para estudiar</h2></div><span id="study-count" class="badge">0 pendientes</span></div><div id="study-list"></div></section></section>
     </main>
-
-    <footer>
-      <p>Semaforín © 2026</p>
-    </footer>
+    <dialog id="evaluation-dialog" class="dialog"><form id="evaluation-form" method="dialog"><div class="dialog-heading"><div><p class="eyebrow">NUEVA EVALUACIÓN</p><h2 id="form-title">Agrega una evaluación</h2></div><button type="button" class="close-button" data-close-dialog aria-label="Cerrar">×</button></div><input type="hidden" id="evaluation-id" /><label for="subject">Asignatura<input id="subject" name="subject" maxlength="50" required placeholder="Ej. Matemáticas" /></label><label for="evaluation-name">Nombre o tipo<input id="evaluation-name" name="name" maxlength="60" required placeholder="Ej. Prueba 2 o presentación" /></label><div class="form-grid"><label for="evaluation-date">Fecha<input id="evaluation-date" name="date" type="date" required /></label><label for="evaluation-type">Tipo<select id="evaluation-type" name="type"><option>Prueba</option><option>Trabajo</option><option>Presentación</option><option>Control</option><option>Otro</option></select></label></div><div class="dialog-actions"><button type="button" class="button secondary" data-close-dialog>Cancelar</button><button type="submit" class="button primary">Guardar evaluación</button></div></form></dialog>
+    <dialog id="study-dialog" class="dialog"><form id="study-form" method="dialog"><div class="dialog-heading"><div><p class="eyebrow">PLAN DE ESTUDIO</p><h2>Reserva un bloque</h2></div><button type="button" class="close-button" data-close-study aria-label="Cerrar">×</button></div><label for="study-title-input">¿Qué estudiarás?<input id="study-title-input" maxlength="70" required placeholder="Ej. Repasar derivadas" /></label><div class="form-grid"><label for="study-date">Fecha<input id="study-date" type="date" required /></label><label for="study-duration">Duración<select id="study-duration"><option>30 min</option><option>45 min</option><option>60 min</option><option>90 min</option></select></label></div><div class="dialog-actions"><button type="button" class="button secondary" data-close-study>Cancelar</button><button type="submit" class="button primary">Guardar bloque</button></div></form></dialog>
+    <footer><span>Semaforín © 2026</span><span>Organiza hoy, estudia con calma.</span></footer>
   </body>
 </html>
